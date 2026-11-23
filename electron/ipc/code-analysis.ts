@@ -18,12 +18,13 @@ function declaredType(raw: string): VariableInfo['type'] {
   if (/float|double|char|string|bool/.test(raw)) return raw.replace('std::', '') as VariableInfo['type'];
   return 'int';
 }
-
-// Only explicit constraints in comments describe the domain. A branch or a loop
-// in the solution selects cases; it does not constrain the problem's inputs.
+function boundValue(raw: string): number {
+  const power = /^(.*?)\s*\^\s*(\d+)$/.exec(raw);
+  return power ? Number(power[1]) ** Number(power[2]) : Number(raw);
+}
 function bounds(comments: string[], variables: VariableInfo[]): ConstraintInfo[] {
   const result = new Map<string, ConstraintInfo>();
-  const number = '-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?';
+  const number = '-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?(?:\\s*\\^\\s*\\d+)?';
   for (const v of variables.filter(v => v.isInput)) {
     const apply = (direction: 'min' | 'max', op: string, value: number, description: string) => {
       const integer = ['int', 'long', 'bool'].includes(v.type);
@@ -34,8 +35,8 @@ function bounds(comments: string[], variables: VariableInfo[]): ConstraintInfo[]
       result.set(v.name, c);
     };
     for (const comment of comments) {
-      for (const m of comment.matchAll(new RegExp(`\\b${v.name}\\s*(<=|>=|<|>)\\s*(${number})(?![\\w.^])`, 'g'))) apply(m[1][0] === '<' ? 'max' : 'min', m[1], Number(m[2]), comment.trim());
-      for (const m of comment.matchAll(new RegExp(`(?<![\\w.^])(${number})\\s*(<=|>=|<|>)\\s*${v.name}\\b`, 'g'))) apply(m[2][0] === '<' ? 'min' : 'max', m[2], Number(m[1]), comment.trim());
+      for (const m of comment.matchAll(new RegExp(`\\b${v.name}\\s*(<=|>=|<|>)\\s*(${number})(?![\\w.])`, 'g'))) apply(m[1][0] === '<' ? 'max' : 'min', m[1], boundValue(m[2]), comment.trim());
+      for (const m of comment.matchAll(new RegExp(`(?<![\\w.^])(${number})\\s*(<=|>=|<|>)\\s*${v.name}\\b`, 'g'))) apply(m[2][0] === '<' ? 'min' : 'max', m[2], boundValue(m[1]), comment.trim());
     }
   }
   return [...result.values()];
