@@ -1,6 +1,5 @@
 import type { Logger } from './logger.js';
 import type { VariableInfo, SubtaskConfig, CodeAnalysisResult, NamingConfig, TestCase, TestGenerationResult, GenerationStrategy } from './code-analysis.js';
-export type { TestGenerationResult } from './code-analysis.js';
 export interface TestGenerationConfig {
   code: string; analysis: CodeAnalysisResult; aiAnalysis?: { seed?: number; generationStrategies?: GenerationStrategy[] };
   subtasks: SubtaskConfig[]; mode: 'input-only' | 'input-output'; totalTestCount: number; namingConfig: NamingConfig;
@@ -28,6 +27,7 @@ export async function generateTestCases(config: TestGenerationConfig, logger: Lo
     let bytes = 0;
     for (const st of config.subtasks) {
       if (!st.testCount) continue;
+      const strategy: string = config.aiAnalysis?.generationStrategies?.find(s => s.subtaskId === st.id)?.strategy ?? st.generationStrategy;
       const params = config.aiAnalysis?.generationStrategies?.find(s => s.subtaskId === st.id)?.parameters ?? {};
       const seen = new Set<string>();
       const specs = variables.map(v => {
@@ -41,23 +41,24 @@ export async function generateTestCases(config: TestGenerationConfig, logger: Lo
         if (!real) { lo = Math.ceil(lo); hi = Math.floor(hi); }
         if (!Number.isFinite(lo) || !Number.isFinite(hi) || lo > hi) throw new Error(`No valid range for ${v.name} in ${st.name}`);
         const edges = [...new Set([lo, hi, lo + 1, hi - 1, -2, -1, 0, 1, 2])].filter(n => n >= lo && n <= hi && (params.includeZero !== false || n !== 0 || lo === hi));
-        return { v, type, real, lo, hi, edges };
+        const lengthVariable = 'lengthVariable' in v ? v.lengthVariable : undefined;
+        return { v, type, real, lo, hi, edges, lengthVariable };
       });
       for (let i = 0; i < st.testCount; i++) {
         let input = '';
         for (let attempt = 0; attempt < 50; attempt++) {
           const parts: string[] = [], sizes = new Map<string, number>();
-          for (const { v, type, real, lo, hi, edges } of specs) {
-            const boundary = st.generationStrategy === 'boundary' || (st.generationStrategy === 'mixed' && random() < Number(params.boundaryRatio ?? 0.3));
+          for (const { v, type, real, lo, hi, edges, lengthVariable } of specs) {
+            const boundary = strategy === 'boundary' || (strategy === 'mixed' && random() < Number(params.boundaryRatio ?? 0.3));
             const scalar = (): string => {
               if (type === 'string' || type === 'char') return Array.from({ length: type === 'char' ? 1 : integer(1, 10) }, () => String.fromCharCode(integer(97, 122))).join('');
               return String(boundary && edges.length ? pick(edges) : real ? lo + random() * (hi - lo) : integer(lo, hi));
             };
             if (!v.isArray && v.type !== 'matrix') { const value = scalar(); sizes.set(v.name, Number(value)); parts.push(value); continue; }
-            const length = v.lengthVariable ? sizes.get(v.lengthVariable) : v.arrayDimensions?.reduce((a,b) => a*b, 1);
+            const length = lengthVariable ? sizes.get(lengthVariable) : v.arrayDimensions?.reduce((a,b) => a*b, 1);
             if (length === undefined || !Number.isSafeInteger(length) || length < 0 || length > MAX_ELEMENTS) throw new Error(`Unsupported or oversized input dimensions for ${v.name}`);
             const values = Array.from({ length }, scalar);
-            const pattern = boundary || st.generationStrategy === 'pattern' || (st.generationStrategy === 'mixed' && random() < Number(params.patternRatio ?? 0.2));
+            const pattern = boundary || strategy === 'pattern' || (strategy === 'mixed' && random() < Number(params.patternRatio ?? 0.2));
             if (pattern && length) {
               const p = pick(['sorted','reverse','duplicate']);
               if (p === 'duplicate') values.fill(values[0]);
