@@ -18,6 +18,7 @@ import { useSettings } from './hooks/useSettings';
 import { generateAndExport } from './utils/generationRun';
 import { validateSourceCode, validateTestCount, validateTimeout } from './utils/validation';
 import type { SubtaskConfig } from './types';
+import './styles/workspace-layout.css';
 
 export function App() {
   const api = useIPC();
@@ -31,7 +32,10 @@ export function App() {
   const [stage, setStage] = useState('');
   const [error, setError] = useState('');
   const [destination, setDestination] = useState('');
-  const [widths, setWidths] = useState({ source: 380, config: 380 });
+  const [widths, setWidths] = useState(() => {
+    const panelWidth = Math.max(320, Math.min(600, Math.floor(window.innerWidth / 3)));
+    return { source: panelWidth, config: panelWidth };
+  });
   const activeRun = useRef(false);
   const busy = Boolean(stage) || s.isAnalyzing || s.isAiAnalyzing;
   useEffect(() => { if (!loading && settings && !settings.firstRunComplete) setWelcome(true); }, [loading, settings]);
@@ -105,8 +109,8 @@ export function App() {
       <div className="flex items-center gap-3"><span className="w-8 h-8 rounded-lg flex items-center justify-center bg-accent text-inverse font-bold">V</span><h1 className="font-semibold text-primary">Voidtest</h1><span className="text-xs text-muted">v1.0.0</span></div>
       <Button variant="ghost" size="icon" onClick={() => setPreferences(true)} aria-label="Settings"><Settings className="w-4 h-4" /></Button>
     </header>
-    <main className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex-1 flex overflow-auto min-h-0">
+    <main className="workspace-main flex-1 flex flex-col overflow-hidden">
+      <div className="workspace-panels flex-1 flex overflow-auto min-h-0">
         <div style={{ width: widths.source, flexShrink: 0 }}><SourceCodePanel /></div>
         <div className="splitter splitter-vertical" style={{ width: 4, cursor: 'col-resize' }} onMouseDown={e => resize('source', e)} />
         <div style={{ width: widths.config, flexShrink: 0 }}><TestConfigPanel onGenerate={begin} disabled={busy || !s.sourceCode.trim()} /></div>
