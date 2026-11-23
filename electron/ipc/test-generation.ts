@@ -36,8 +36,8 @@ export async function generateTestCases(config: TestGenerationConfig, logger: Lo
         const c = config.analysis.constraints.find(c => c.variable === v.name), limit = st.limits[v.name];
         let lo = Math.max(Number(c?.min ?? -Infinity), limit?.min ?? -Infinity), hi = Math.min(Number(c?.max ?? Infinity), limit?.max ?? Infinity);
         if (type === 'bool') { lo = Math.max(0, lo); hi = Math.min(1, hi); }
-        if (lo === -Infinity) lo = Math.min(1, hi);
-        if (hi === Infinity) hi = Math.max(100, lo);
+        if (lo === -Infinity) lo = type === 'bool' ? 0 : Math.min(1, hi);
+        if (hi === Infinity) hi = type === 'bool' ? 1 : Math.max(100, lo);
         if (!real) { lo = Math.ceil(lo); hi = Math.floor(hi); }
         if (!Number.isFinite(lo) || !Number.isFinite(hi) || lo > hi) throw new Error(`No valid range for ${v.name} in ${st.name}`);
         const edges = [...new Set([lo, hi, lo + 1, hi - 1, -2, -1, 0, 1, 2])].filter(n => n >= lo && n <= hi && (params.includeZero !== false || n !== 0 || lo === hi));
