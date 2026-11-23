@@ -1,0 +1,19 @@
+{
+  "name": "voidtest",
+  "version": "1.0.0",
+  "description": "Voidtest - Automatic Test Case Generator for Programming Problems",
+  "author": "Voidtest Team",
+  "main": "dist-electron/main.js",
+  "dependencies": {
+    "electron-store": "^9.0.0",
+    "archiver": "^7.0.1",
+    "archiver-utils": "^5.0.2",
+    "zod": "^3.23.8",
+    "zustand": "^5.0.0",
+    "lucide-react": "^0.441.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}

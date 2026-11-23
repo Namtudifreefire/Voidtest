@@ -1,0 +1,56 @@
+{
+  "appId": "com.voidtest.app",
+  "productName": "Voidtest",
+  "copyright": "Copyright © 2026 Voidtest",
+  "directories": {
+    "output": "dist",
+    "buildResources": "build-resources"
+  },
+  "files": [
+    "electron/**/*",
+    "dist/**/*",
+    "node_modules/**/*",
+    "package.json"
+  ],
+  "extraResources": [
+    {
+      "from": "resources",
+      "to": "resources",
+      "filter": ["**/*"]
+    }
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64", "ia32"]
+      }
+    ],
+    "icon": "build-resources/icon.ico"
+  },
+  "mac": {
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["x64", "arm64"]
+      }
+    ],
+    "icon": "build-resources/icon.icns"
+  },
+  "linux": {
+    "target": [
+      {
+        "target": "AppImage",
+        "arch": ["x64", "arm64"]
+      }
+    ],
+    "icon": "build-resources/icon.png",
+    "category": "Development"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true
+  }
+}

@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+dist-electron/
+build/
+*.app/
+*.exe/
+*.dmg/
+*.AppImage/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Electron
+electron/*.js
+!electron/preload.js
+
+# Test coverage
+coverage/
+
+# TypeScript
+*.tsbuildinfo
+
+# Temporary files
+tmp/
+temp/
+*.tmp/dist_final2/
+/dist_out/
+/dist/
+/node_modules/
+/dist_final2/
+/dist_out/
+/dist/
+/node_modules/
+/dist_ready/
+/dist_final2/
+/dist_out/
+/dist/
+/node_modules/
