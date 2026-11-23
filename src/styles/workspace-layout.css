@@ -1,0 +1,7 @@
+/* Let workspace panels use the width assigned by the resizable layout. */
+.workspace-panels > div:not(.splitter) > .panel,
+.workspace-main > .panel {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
