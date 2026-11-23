@@ -23,6 +23,9 @@ export default {
         warning: 'var(--bg-warning)',
         error: 'var(--bg-error)',
       },
+      textColor: {
+        secondary: 'var(--text-secondary)',
+      },
       fontFamily: {
         sans: ['var(--font-ui)'],
         mono: ['var(--font-sans)'],
