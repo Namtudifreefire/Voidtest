@@ -22,14 +22,52 @@ function boundValue(raw: string): number {
   const power = /^(.*?)\s*\^\s*(\d+)$/.exec(raw);
   return power ? Number(power[1]) ** Number(power[2]) : Number(raw);
 }
+function strictFloatBound(value: number, direction: -1 | 1, type: VariableInfo['type']): number {
+  if (type === 'float') {
+    const rounded = Math.fround(value);
+    if (direction > 0 && rounded > value) return rounded;
+    if (direction < 0 && rounded < value) return rounded;
+    if (rounded === 0) return direction > 0 ? 2 ** -149 : -(2 ** -149);
+    const view = new DataView(new ArrayBuffer(4));
+    view.setFloat32(0, rounded);
+    let bits = view.getUint32(0);
+    bits += ((direction > 0) === (rounded > 0)) ? 1 : -1;
+    view.setUint32(0, bits);
+    return view.getFloat32(0);
+  }
+  if (value === 0) return direction > 0 ? Number.MIN_VALUE : -Number.MIN_VALUE;
+  const view = new DataView(new ArrayBuffer(8));
+  view.setFloat64(0, value);
+  let bits = view.getBigUint64(0);
+  bits += ((direction > 0) === (value > 0)) ? 1n : -1n;
+  view.setBigUint64(0, bits);
+  return view.getFloat64(0);
+}
+function splitDeclarators(raw: string): string[] {
+  const parts: string[] = [];
+  let start = 0, angle = 0, round = 0, square = 0;
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (ch === '<') angle++;
+    else if (ch === '>' && angle) angle--;
+    else if (ch === '(') round++;
+    else if (ch === ')' && round) round--;
+    else if (ch === '[') square++;
+    else if (ch === ']' && square) square--;
+    else if (ch === ',' && !angle && !round && !square) { parts.push(raw.slice(start, i)); start = i + 1; }
+  }
+  parts.push(raw.slice(start));
+  return parts;
+}
 function bounds(comments: string[], variables: VariableInfo[]): ConstraintInfo[] {
   const result = new Map<string, ConstraintInfo>();
   const number = '-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?(?:\\s*\\^\\s*\\d+)?';
   for (const v of variables.filter(v => v.isInput)) {
     const apply = (direction: 'min' | 'max', op: string, value: number, description: string) => {
       const integer = ['int', 'long', 'bool'].includes(v.type);
-      if (!Number.isFinite(value) || (!integer && op.length === 1)) return;
+      if (!Number.isFinite(value)) return;
       if (integer) value = direction === 'min' ? (op.length === 1 ? Math.floor(value) + 1 : Math.ceil(value)) : (op.length === 1 ? Math.ceil(value) - 1 : Math.floor(value));
+      else if (op.length === 1 && (v.type === 'float' || v.type === 'double')) value = strictFloatBound(value, direction === 'min' ? 1 : -1, v.type);
       const c = result.get(v.name) ?? { variable: v.name, description };
       c[direction] = direction === 'min' ? Math.max(Number(c.min ?? -Infinity), value) : Math.min(Number(c.max ?? Infinity), value);
       result.set(v.name, c);
@@ -51,7 +89,7 @@ export async function analyzeCode(sourceCode: string, _logger: unknown): Promise
   const declarations = new Map<string, VariableInfo>();
   const declaration = /\b((?:std::)?(?:vector\s*<\s*\w+\s*>|array\s*<\s*\w+\s*,\s*\d+\s*>|string)|long\s+long|int|long|short|double|float|char|bool)\s+([^;{}]+);/g;
   for (const m of code.matchAll(declaration)) {
-    for (const item of m[2].split(',')) {
+    for (const item of splitDeclarators(m[2])) {
       const d = /^\s*([A-Za-z_]\w*)\s*((?:\[\s*\d+\s*\]\s*)*)(?:\(\s*(\w+)\s*\))?\s*(?:=[\s\S]*)?$/.exec(item);
       if (!d) continue;
       const type = declaredType(m[1]);
